@@ -3,16 +3,7 @@ import { IVideoRepository, IVideoJob } from '../../core/interfaces/IVideoReposit
 import { VideoModel } from '../database/models/VideoModel';
 
 export class MongoVideoRepository implements IVideoRepository {
-    private static instance: MongoVideoRepository;
-
-    private constructor() { }
-
-    public static getInstance(): MongoVideoRepository {
-        if (!MongoVideoRepository.instance) {
-            MongoVideoRepository.instance = new MongoVideoRepository();
-        }
-        return MongoVideoRepository.instance;
-    }
+    constructor() { }
 
     async create(videoData: Partial<IVideoJob>): Promise<IVideoJob> {
         const video = await VideoModel.create(videoData);

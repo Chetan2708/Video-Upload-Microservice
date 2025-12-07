@@ -1,13 +1,15 @@
 
 import { Request, Response } from 'express';
-import { VideoModel } from '../models/VideoModel';
-import { S3StorageService } from '../services/S3StorageService';
-
-const s3Service = new S3StorageService();
+import { IVideoRepository } from '../../core/interfaces/IVideoRepository';
+import { IStorageService } from '../../core/interfaces/IStorageService';
 
 export class VideoController {
+    constructor(
+        private videoRepo: IVideoRepository,
+        private s3Service: IStorageService
+    ) { }
 
-    static async getUserVideos(req: Request, res: Response) {
+    getUserVideos = async (req: Request, res: Response) => {
         try {
             const { userId } = req.query;
 
@@ -15,7 +17,7 @@ export class VideoController {
                 return res.status(400).json({ error: "userId required" });
             }
 
-            const videos = await VideoModel.find({ userId }).sort({ createdAt: -1 });
+            const videos = await this.videoRepo.findByUserId(userId as string);
             return res.json({ videos });
         } catch (error) {
             console.error("Get Videos Error:", error);
@@ -23,11 +25,11 @@ export class VideoController {
         }
     }
 
-    static async getVideo(req: Request, res: Response) {
+    getVideo = async (req: Request, res: Response) => {
         try {
             const { videoId } = req.params;
 
-            const video = await VideoModel.findOne({ videoId });
+            const video = await this.videoRepo.findById(videoId);
 
             if (!video) {
                 return res.status(404).json({ error: "Video not found" });
@@ -36,13 +38,13 @@ export class VideoController {
             let url = null;
             if (video.s3Key) {
                 try {
-                    url = await s3Service.generatePresignedDownloadUrl(video.s3Key);
+                    url = await this.s3Service.generatePresignedDownloadUrl(video.s3Key);
                 } catch (e) {
                     console.error("Failed to sign url", e);
                 }
             }
 
-            return res.json({ video: { ...video.toObject(), url } });
+            return res.json({ video: { ...video, url } });
         } catch (error) {
             console.error("Get Video Error:", error);
             return res.status(500).json({ error: "Failed to fetch video" });

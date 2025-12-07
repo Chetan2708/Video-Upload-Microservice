@@ -1,13 +1,15 @@
 
 import { Request, Response } from 'express';
-import { S3StorageService } from '../services/S3StorageService';
-import { VideoModel } from '../models/VideoModel';
-
-const s3Service = new S3StorageService();
+import { IStorageService } from '../../core/interfaces/IStorageService';
+import { IVideoRepository } from '../../core/interfaces/IVideoRepository';
 
 export class UploadController {
+    constructor(
+        private s3Service: IStorageService,
+        private videoRepo: IVideoRepository
+    ) { }
 
-    static async initializeUpload(req: Request, res: Response) {
+    initializeUpload = async (req: Request, res: Response) => {
         try {
             const { fileName, contentType } = req.body;
 
@@ -15,7 +17,7 @@ export class UploadController {
                 return res.status(400).json({ error: "FileName and ContentType required" });
             }
 
-            const { uploadId, key } = await s3Service.initiateMultipartUpload(fileName, contentType);
+            const { uploadId, key } = await this.s3Service.initiateMultipartUpload(fileName, contentType);
 
             return res.json({ uploadId, key });
         } catch (error) {
@@ -24,11 +26,11 @@ export class UploadController {
         }
     }
 
-    static async signPart(req: Request, res: Response) {
+    signPart = async (req: Request, res: Response) => {
         try {
             const { key, uploadId, partNumber } = req.body;
 
-            const url = await s3Service.generatePresignedUrl(key, uploadId, Number(partNumber));
+            const url = await this.s3Service.generatePresignedUrl(key, uploadId, Number(partNumber));
             return res.json({ url });
         } catch (error) {
             console.error("Sign Part Error:", error);
@@ -36,16 +38,16 @@ export class UploadController {
         }
     }
 
-    static async completeUpload(req: Request, res: Response) {
+    completeUpload = async (req: Request, res: Response) => {
         try {
             const { key, uploadId, parts, fileName, contentType, fileSize, userId } = req.body;
 
             // 1. Complete S3 Upload
-            await s3Service.completeMultipartUpload(key, uploadId, parts);
+            await this.s3Service.completeMultipartUpload(key, uploadId, parts);
 
             // 2. Create Video Record in DB
-            const video = await VideoModel.create({
-                userId, // Passed from client
+            const video = await this.videoRepo.create({
+                userId,
                 fileName: fileName,
                 contentType: contentType || 'video/mp4',
                 fileSize: Number(fileSize),
