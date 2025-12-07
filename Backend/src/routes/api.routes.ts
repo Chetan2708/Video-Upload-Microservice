@@ -35,5 +35,6 @@ router.post('/upload/complete', validate([
 
 router.get('/videos', videoController.getUserVideos);
 router.get('/videos/:videoId', videoController.getVideo);
+router.get('/videos/status/:videoId', videoController.getVideoStatus);
 
 export default router;

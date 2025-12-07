@@ -50,4 +50,19 @@ export class VideoController {
             return res.status(500).json({ error: "Failed to fetch video" });
         }
     }
+    getVideoStatus = async (req: Request, res: Response) => {
+        try {
+            const { videoId } = req.params;
+            const video = await this.videoRepo.findById(videoId);
+
+            if (!video) {
+                return res.status(404).json({ error: "Video not found" });
+            }
+
+            return res.json({ status: video.status });
+        } catch (error) {
+            console.error("Get Video Status Error:", error);
+            return res.status(500).json({ error: "Failed to fetch video status" });
+        }
+    }
 }
