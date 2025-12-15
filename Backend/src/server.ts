@@ -16,14 +16,11 @@ app.use(helmet());
 app.use(morgan('dev'));
 
 
-app.get('/', (_req, res) => {
-    res.status(200)
-        .type('html')
-        .send(`<!doctype html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Video Microservice</title></head><body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem;">
-<h1>Video Microservice is up</h1>
-<p>Status: <strong>OK</strong></p>
-</body></html>`);
-});
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './core/config/swagger';
+
+app.use('/', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 
 const MONGO_URI = config.mongo.uri;
 console.log("Connecting to Mongo (Microservice)...");
