@@ -2,9 +2,7 @@ import swaggerJsdoc from 'swagger-jsdoc';
 import { config } from './config';
 
 const port = config.port;
-const url = config.env === 'production'
-    ? 'https://your-production-url.com'
-    : `http://localhost:${port}`;
+const url = process.env.SERVER_URL || `http://localhost:${port}`;
 
 import path from 'path';
 
