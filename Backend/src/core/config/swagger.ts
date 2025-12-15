@@ -6,6 +6,8 @@ const url = config.env === 'production'
     ? 'https://your-production-url.com'
     : `http://localhost:${port}`;
 
+import path from 'path';
+
 const options: swaggerJsdoc.Options = {
     definition: {
         openapi: '3.0.0',
@@ -46,7 +48,11 @@ const options: swaggerJsdoc.Options = {
             }
         }
     },
-    apis: ['./src/routes/*.ts', './src/routes/*.js'],
+    // Use absolute paths to ensure files are found regardless of where the app is started
+    apis: [
+        path.join(__dirname, '../../routes/*.ts'),
+        path.join(__dirname, '../../routes/*.js')
+    ],
 };
 
 export const swaggerSpec = swaggerJsdoc(options);
