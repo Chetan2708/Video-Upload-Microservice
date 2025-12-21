@@ -19,7 +19,11 @@ app.use(morgan('dev'));
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './core/config/swagger';
 
-app.use('/', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.get('/', (req, res) => {
+    res.redirect('/docs');
+});
+
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 
 const MONGO_URI = config.mongo.uri;
