@@ -57,7 +57,14 @@ export class UploadController {
                 processedFiles: []
             });
 
-            return res.json({ message: "Upload complete", videoId: video.videoId });
+            const result = {
+                videoId: video.videoId,
+                fileName: video.fileName,
+                fileSize: video.fileSize,
+                status: video.status,
+            };
+
+            return res.json({ message: "Upload complete", result });
 
         } catch (error) {
             console.error("Complete Upload Error:", error);

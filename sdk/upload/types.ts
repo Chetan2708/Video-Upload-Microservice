@@ -8,3 +8,13 @@ export interface InitUploadResponse {
     key: string;
     videoId?: string;
 }
+
+export interface CompleteUploadResponse {
+    message: string;
+    result: {
+        videoId: string;
+        fileName: string;
+        fileSize: number;
+        status: string;
+    };
+}

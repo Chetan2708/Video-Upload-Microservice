@@ -1,6 +1,6 @@
 import axios from "axios";
-import { retryAsync } from "./retry";
-import type { UploadPart, InitUploadResponse } from "./types";
+import { retryAsync } from "./retry.js";
+import type { UploadPart, InitUploadResponse, CompleteUploadResponse } from "./types.js";
 
 const CHUNK_SIZE = 5 * 1024 * 1024;
 const MAX_CONCURRENCY = 3;
@@ -57,7 +57,7 @@ export class UploadService {
         file: File,
         userId: string
     ) {
-        await axios.post(`${this.baseUrl}/upload/complete`, {
+        const { data } = await axios.post(`${this.baseUrl}/upload/complete`, {
             uploadId,
             key,
             parts,
@@ -66,6 +66,8 @@ export class UploadService {
             fileSize: file.size,
             contentType: file.type
         });
+
+        return data as CompleteUploadResponse;
     }
 
     async uploadFile(
@@ -95,9 +97,9 @@ export class UploadService {
 
         await this.processQueue(tasks, MAX_CONCURRENCY);
 
-        await this.completeUpload(key, uploadId, parts, file, userId);
+        const response = await this.completeUpload(key, uploadId, parts, file, userId);
 
-        return { key };
+        return response.result;
     }
 
     private async processQueue(tasks: (() => Promise<void>)[], limit: number) {

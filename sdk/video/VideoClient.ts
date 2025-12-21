@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { VideoListResponse, VideoGetResponse } from "./types";
+import type { VideoListResponse, VideoGetResponse } from "./types.js";
 
 export class VideoClient {
     private api;

@@ -1,5 +1,5 @@
-import { UploadService } from "./UploadService";
-import { VideoClient } from "../video/VideoClient";
+import { UploadService } from "./UploadService.js";
+import { VideoClient } from "../video/VideoClient.js";
 
 export class UploadClient {
     private uploadService: UploadService;
