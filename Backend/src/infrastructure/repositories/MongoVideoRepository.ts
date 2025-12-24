@@ -65,7 +65,7 @@ export class MongoVideoRepository implements IVideoRepository {
             }
 
             if (existing.userId !== userId) {
-                throw new NotFoundError("Video not found");
+                throw new NotFoundError("User not found");
             }
 
             if (existing.status !== 'INITIATED' && existing.status !== 'UPLOADING') {
@@ -73,7 +73,7 @@ export class MongoVideoRepository implements IVideoRepository {
             }
 
             const existingPart = existing.parts?.[String(part.PartNumber)];
-            if (existingPart && existingPart.etag !== part.ETag) {
+            if (existingPart?.etag !== part.ETag) {
                 throw new ConflictError("Part already confirmed with different ETag");
             }
 

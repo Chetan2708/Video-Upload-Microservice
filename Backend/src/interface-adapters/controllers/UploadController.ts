@@ -107,6 +107,7 @@ export class UploadController {
 
             // 3. Active Path: Attempt to Lock
             if (video.status === 'UPLOADING') {
+                //FIND ONE AND UPDATE --> THE LOCK !
                 const lockedVideo = await this.videoRepo.tryAcquireCompletionLock(videoId, userId);
 
                 if (!lockedVideo) {
@@ -114,7 +115,6 @@ export class UploadController {
                     const freshVideo = await this.videoRepo.findByIdAndUser(videoId, userId);
                     if (freshVideo?.status === 'UPLOADED') return res.json({ message: "Upload complete", status: 'UPLOADED' });
                     if (freshVideo?.status === 'COMPLETING') return res.status(202).json({ message: "Completion in progress" });
-                    // Should not really happen if logic is correct, but fail safe
                     throw new ConflictError("Concurrent completion in progress");
                 }
 
@@ -135,11 +135,7 @@ export class UploadController {
 
                 // Phase 2: Execute
                 await this.s3Service.completeMultipartUpload(lockedVideo.s3Key, lockedVideo.uploadId, partsArray);
-                const finalized = await this.videoRepo.finalizeUpload(videoId, userId);
-                if (!finalized) {
-                    return res.json({ message: "Upload complete", status: 'UPLOADED' });
-                }
-
+                await this.videoRepo.finalizeUpload(videoId, userId);
                 return res.json({ message: "Upload complete", status: 'UPLOADED' });
             }
 
