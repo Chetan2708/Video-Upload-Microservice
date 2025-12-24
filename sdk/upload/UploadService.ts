@@ -7,15 +7,20 @@ const MAX_CONCURRENCY = 3;
 
 export class UploadService {
 
-    constructor(private baseUrl: string) { }
+    constructor(private baseUrl: string, private authToken: string) { }
 
-    async initiateUpload(file: File, userId: string): Promise<InitUploadResponse> {
+    private get headers() {
+        return {
+            Authorization: `Bearer ${this.authToken}`
+        };
+    }
+
+    async initiateUpload(file: File): Promise<InitUploadResponse> {
         const { data } = await axios.post(`${this.baseUrl}/upload/init`, {
             fileName: file.name,
             contentType: file.type,
-            fileSize: file.size,
-            userId
-        });
+            fileSize: file.size
+        }, { headers: this.headers });
 
         return data;
     }
@@ -31,7 +36,7 @@ export class UploadService {
         const { data } = await axios.post(`${this.baseUrl}/upload/sign-part`, {
             videoId,
             partNumber
-        });
+        }, { headers: this.headers });
 
         const chunk = file.slice(start, end);
 
@@ -49,23 +54,22 @@ export class UploadService {
             videoId,
             partNumber,
             etag: ETag
-        });
+        }, { headers: this.headers });
     }
 
     async completeUpload(videoId: string) {
         const { data } = await axios.post(`${this.baseUrl}/upload/complete`, {
             videoId
-        });
+        }, { headers: this.headers });
 
         return data as CompleteUploadResponse;
     }
 
     async uploadFile(
         file: File,
-        userId: string,
         onProgress: (p: number) => void
     ) {
-        const { videoId } = await this.initiateUpload(file, userId);
+        const { videoId } = await this.initiateUpload(file);
 
         const totalParts = Math.ceil(file.size / CHUNK_SIZE);
         let completed = 0;

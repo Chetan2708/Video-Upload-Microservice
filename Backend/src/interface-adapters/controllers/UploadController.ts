@@ -10,11 +10,13 @@ export class UploadController {
         private videoRepo: IVideoRepository
     ) { }
 
-    initializeUpload = async (req: Request, res: Response) => {
+    initializeUpload = async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const { fileName, contentType, userId, fileSize } = req.body;
+            const { fileName, contentType, fileSize } = req.body;
+            // @ts-ignore
+            const userId = req.user!.id;
 
-            if (!fileName || !contentType || !userId || !fileSize) {
+            if (!fileName || !contentType || !fileSize) {
                 return res.status(400).json({ error: "Missing required fields" });
             }
 
@@ -38,16 +40,17 @@ export class UploadController {
                 key
             });
         } catch (error) {
-            console.error("Init Upload Error:", error);
-            return res.status(500).json({ error: "Failed to init upload" });
+            next(error);
         }
     }
 
-    signPart = async (req: Request, res: Response) => {
+    signPart = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const { videoId, partNumber } = req.body;
+            // @ts-ignore
+            const userId = req.user!.id;
 
-            const video = await this.videoRepo.findById(videoId);
+            const video = await this.videoRepo.findByIdAndUser(videoId, userId);
             if (!video) {
                 return res.status(404).json({ error: "Video not found" });
             }
@@ -59,23 +62,17 @@ export class UploadController {
             const url = await this.s3Service.generatePresignedUrl(video.s3Key, video.uploadId, Number(partNumber));
             return res.json({ url });
         } catch (error) {
-            console.error("Sign Part Error:", error);
-            return res.status(500).json({ error: "Failed to sign part" });
+            next(error);
         }
     }
 
     confirmPart = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const { videoId, partNumber, etag } = req.body;
+            // @ts-ignore
+            const userId = req.user!.id;
 
-            // Simple existence check (optional optimization, repo handles it too)
-            const video = await this.videoRepo.findById(videoId);
-            if (!video) {
-                throw new NotFoundError("Video not found");
-            }
-
-            // Delegating strict idempotency and failure analysis to Repo
-            await this.videoRepo.addPart(videoId, { PartNumber: partNumber, ETag: etag });
+            await this.videoRepo.addPart(videoId, userId, { PartNumber: partNumber, ETag: etag });
 
             return res.json({ message: "Part confirmed" });
 
@@ -87,7 +84,10 @@ export class UploadController {
     completeUpload = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const { videoId } = req.body;
-            let video = await this.videoRepo.findById(videoId);
+            // @ts-ignore
+            const userId = req.user!.id;
+
+            let video = await this.videoRepo.findByIdAndUser(videoId, userId);
 
             if (!video) {
                 throw new NotFoundError("Video not found");
@@ -98,19 +98,20 @@ export class UploadController {
             }
 
             if (video.status === 'COMPLETING') {
-                if (video.completionParts?.length) {
-                    await this.videoRepo.finalizeUpload(videoId);
+                if (video.completionParts && video.completionParts.length > 0) {
+                    await this.videoRepo.finalizeUpload(videoId, userId);
                     return res.json({ message: "Upload complete", status: 'UPLOADED' });
                 }
                 return res.status(202).json({ message: "Completion in progress" });
             }
 
+            // 3. Active Path: Attempt to Lock
             if (video.status === 'UPLOADING') {
-                const lockedVideo = await this.videoRepo.tryAcquireCompletionLock(videoId);
+                const lockedVideo = await this.videoRepo.tryAcquireCompletionLock(videoId, userId);
 
                 if (!lockedVideo) {
                     // Race condition hit: Someone else likely locked it. Check state again.
-                    const freshVideo = await this.videoRepo.findById(videoId);
+                    const freshVideo = await this.videoRepo.findByIdAndUser(videoId, userId);
                     if (freshVideo?.status === 'UPLOADED') return res.json({ message: "Upload complete", status: 'UPLOADED' });
                     if (freshVideo?.status === 'COMPLETING') return res.status(202).json({ message: "Completion in progress" });
                     // Should not really happen if logic is correct, but fail safe
@@ -130,11 +131,14 @@ export class UploadController {
                     throw new AppError("No parts found", 400);
                 }
 
-                await this.videoRepo.persistCompletionSnapshot(videoId, partsArray);
+                await this.videoRepo.persistCompletionSnapshot(videoId, userId, partsArray);
 
                 // Phase 2: Execute
                 await this.s3Service.completeMultipartUpload(lockedVideo.s3Key, lockedVideo.uploadId, partsArray);
-                await this.videoRepo.finalizeUpload(videoId);
+                const finalized = await this.videoRepo.finalizeUpload(videoId, userId);
+                if (!finalized) {
+                    return res.json({ message: "Upload complete", status: 'UPLOADED' });
+                }
 
                 return res.json({ message: "Upload complete", status: 'UPLOADED' });
             }

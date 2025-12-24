@@ -18,11 +18,12 @@ export interface IVideoJob {
 export interface IVideoRepository {
     create(video: Partial<IVideoJob>): Promise<IVideoJob>;
     updateStatus(uploadId: string, status: IVideoJob['status']): Promise<IVideoJob | null>;
-    addPart(videoId: string, part: { PartNumber: number; ETag: string }): Promise<boolean>;
-    tryAcquireCompletionLock(videoId: string): Promise<IVideoJob | null>;
-    persistCompletionSnapshot(videoId: string, parts: { PartNumber: number; ETag: string }[]): Promise<void>;
-    finalizeUpload(videoId: string): Promise<boolean>;
+    addPart(videoId: string, userId: string, part: { PartNumber: number; ETag: string }): Promise<boolean>;
+    tryAcquireCompletionLock(videoId: string, userId: string): Promise<IVideoJob | null>;
+    persistCompletionSnapshot(videoId: string, userId: string, parts: { PartNumber: number; ETag: string }[]): Promise<void>;
+    finalizeUpload(videoId: string, userId: string): Promise<boolean>;
     findByUploadId(uploadId: string): Promise<IVideoJob | null>;
     findByUserId(userId: string): Promise<IVideoJob[]>;
     findById(videoId: string): Promise<IVideoJob | null>;
+    findByIdAndUser(videoId: string, userId: string): Promise<IVideoJob | null>;
 }

@@ -8,7 +8,8 @@ const requiredEnvVars = [
     'AWS_REGION',
     'AWS_ACCESS_KEY_ID',
     'AWS_SECRET_ACCESS_KEY',
-    'AWS_BUCKET_NAME'
+    'AWS_BUCKET_NAME',
+    'JWT_SECRET'
 ];
 
 requiredEnvVars.forEach((key) => {
@@ -20,6 +21,7 @@ requiredEnvVars.forEach((key) => {
 export const config = {
     env: process.env.NODE_ENV || 'development',
     port: parseInt(process.env.PORT || '5001', 10),
+    jwtSecret: process.env.JWT_SECRET || 'default_secret',
     mongo: {
         uri: process.env.MONGO_URI || '',
     },

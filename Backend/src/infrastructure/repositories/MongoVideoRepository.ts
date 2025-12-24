@@ -22,6 +22,10 @@ export class MongoVideoRepository implements IVideoRepository {
         return await VideoModel.find({ userId }).sort({ createdAt: -1 }).lean();
     }
 
+    async findByIdAndUser(videoId: string, userId: string): Promise<IVideoJob | null> {
+        return await VideoModel.findOne({ videoId, userId }).lean();
+    }
+
     async updateStatus(uploadId: string, status: IVideoJob['status']): Promise<IVideoJob | null> {
         return await VideoModel.findOneAndUpdate(
             { uploadId },
@@ -30,11 +34,12 @@ export class MongoVideoRepository implements IVideoRepository {
         ).lean();
     }
 
-    async addPart(videoId: string, part: { PartNumber: number; ETag: string }): Promise<boolean> {
+    async addPart(videoId: string, userId: string, part: { PartNumber: number; ETag: string }): Promise<boolean> {
         const partKey = `parts.${part.PartNumber}`;
         const res = await VideoModel.updateOne(
             {
                 videoId,
+                userId,
                 status: { $in: ['INITIATED', 'UPLOADING'] },
                 $or: [
                     { [partKey]: { $exists: false } },
@@ -53,9 +58,13 @@ export class MongoVideoRepository implements IVideoRepository {
         );
 
         if (res.matchedCount === 0) {
-            const existing = await VideoModel.findOne({ videoId }, { [`parts.${part.PartNumber}`]: 1, status: 1 }).lean();
+            const existing = await VideoModel.findOne({ videoId }, { [`parts.${part.PartNumber}`]: 1, status: 1, userId: 1 }).lean();
 
             if (!existing) {
+                throw new NotFoundError("Video not found");
+            }
+
+            if (existing.userId !== userId) {
                 throw new NotFoundError("Video not found");
             }
 
@@ -74,9 +83,9 @@ export class MongoVideoRepository implements IVideoRepository {
         return true;
     }
 
-    async tryAcquireCompletionLock(videoId: string): Promise<IVideoJob | null> {
+    async tryAcquireCompletionLock(videoId: string, userId: string): Promise<IVideoJob | null> {
         const res = await VideoModel.findOneAndUpdate(
-            { videoId, status: 'UPLOADING' },
+            { videoId, userId, status: 'UPLOADING' },
             {
                 $set: {
                     status: 'COMPLETING',
@@ -88,16 +97,16 @@ export class MongoVideoRepository implements IVideoRepository {
         return res;
     }
 
-    async persistCompletionSnapshot(videoId: string, parts: { PartNumber: number; ETag: string }[]): Promise<void> {
+    async persistCompletionSnapshot(videoId: string, userId: string, parts: { PartNumber: number; ETag: string }[]): Promise<void> {
         await VideoModel.updateOne(
-            { videoId, status: 'COMPLETING' },
+            { videoId, userId, status: 'COMPLETING' },
             { $set: { completionParts: parts } }
         );
     }
 
-    async finalizeUpload(videoId: string): Promise<boolean> {
+    async finalizeUpload(videoId: string, userId: string): Promise<boolean> {
         const res = await VideoModel.updateOne(
-            { videoId, status: 'COMPLETING' },
+            { videoId, userId, status: 'COMPLETING' },
             { $set: { status: 'UPLOADED' } }
         );
         return res.modifiedCount > 0;

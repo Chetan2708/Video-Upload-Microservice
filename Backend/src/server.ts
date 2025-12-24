@@ -7,6 +7,9 @@ import mongoose from 'mongoose';
 import apiRoutes from './routes/api.routes';
 import { errorMiddleware } from './interface-adapters/middleware/errorMiddleware';
 import { config } from './core/config/config';
+import { authMiddleware } from './interface-adapters/middleware/authMiddleware';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './core/config/swagger';
 
 const app = express();
 
@@ -16,8 +19,6 @@ app.use(helmet());
 app.use(morgan('dev'));
 
 
-import swaggerUi from 'swagger-ui-express';
-import { swaggerSpec } from './core/config/swagger';
 
 app.get('/', (req, res) => {
     res.redirect('/docs');
@@ -33,7 +34,7 @@ mongoose.connect(MONGO_URI)
     .then(() => console.log("Video Microservice: MongoDB Connected"))
     .catch(err => console.error("Video Microservice: MongoDB Connection Error", err));
 
-app.use('/api/v1', apiRoutes);
+app.use('/api/v1', authMiddleware, apiRoutes);
 
 app.use(errorMiddleware);
 
