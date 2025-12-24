@@ -8,7 +8,7 @@ export interface IVideoJob {
     s3Key: string;
     status: "INITIATED" | "UPLOADING" | "UPLOADED" | "PROCESSING" | "DONE" | "FAILED";
     processedFiles: string[];
-    parts: { PartNumber: number; ETag: string }[];
+    parts: Record<string, string>;
     createdAt: Date;
     updatedAt: Date;
 }

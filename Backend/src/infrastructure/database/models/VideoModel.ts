@@ -17,10 +17,11 @@ const videoSchema = new Schema<IVideoJob>({
         default: "INITIATED"
     },
     processedFiles: { type: [String], default: [] },
-    parts: [{
-        PartNumber: { type: Number, required: true },
-        ETag: { type: String, required: true }
-    }]
+    parts: {
+        type: Map,
+        of: String,
+        default: {}
+    }
 }, {
     timestamps: true
 });

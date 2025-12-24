@@ -28,7 +28,7 @@ export class UploadController {
                 s3Key: key,
                 status: 'INITIATED',
                 processedFiles: [],
-                parts: []
+                parts: {}
             });
 
             return res.json({
@@ -72,11 +72,6 @@ export class UploadController {
                 return res.status(404).json({ error: "Video not found" });
             }
 
-            const partExists = video.parts?.some(p => p.PartNumber === partNumber);
-            if (partExists) {
-                return res.json({ message: "Part already confirmed" });
-            }
-
             const success = await this.videoRepo.addPart(videoId, { PartNumber: partNumber, ETag: etag });
             if (!success) {
                 return res.status(409).json({ error: "Invalid state for part confirmation" });
@@ -105,11 +100,17 @@ export class UploadController {
                 return res.status(409).json({ error: `Cannot complete upload in status ${video.status}` });
             }
 
-            if (!video.parts || video.parts.length === 0) {
+            const partsMap = video.parts || {};
+            const partsArray = Object.entries(partsMap).map(([partNum, etag]) => ({
+                PartNumber: Number(partNum),
+                ETag: etag as string
+            })).sort((a, b) => a.PartNumber - b.PartNumber);
+
+            if (partsArray.length === 0) {
                 return res.status(400).json({ error: "No parts found for this video" });
             }
 
-            await this.s3Service.completeMultipartUpload(video.s3Key, video.uploadId, video.parts);
+            await this.s3Service.completeMultipartUpload(video.s3Key, video.uploadId, partsArray);
 
             const success = await this.videoRepo.markAsUploaded(videoId);
 
