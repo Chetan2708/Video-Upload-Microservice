@@ -1,7 +1,8 @@
 
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { IStorageService } from '../../core/interfaces/IStorageService';
 import { IVideoRepository } from '../../core/interfaces/IVideoRepository';
+import { NotFoundError, ConflictError } from '../../core/errors/AppError';
 
 export class UploadController {
     constructor(
@@ -63,25 +64,23 @@ export class UploadController {
         }
     }
 
-    confirmPart = async (req: Request, res: Response) => {
+    confirmPart = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const { videoId, partNumber, etag } = req.body;
 
+            // Simple existence check (optional optimization, repo handles it too)
             const video = await this.videoRepo.findById(videoId);
             if (!video) {
-                return res.status(404).json({ error: "Video not found" });
+                throw new NotFoundError("Video not found");
             }
 
-            const success = await this.videoRepo.addPart(videoId, { PartNumber: partNumber, ETag: etag });
-            if (!success) {
-                return res.status(409).json({ error: "Invalid state for part confirmation" });
-            }
+            // Delegating strict idempotency and failure analysis to Repo
+            await this.videoRepo.addPart(videoId, { PartNumber: partNumber, ETag: etag });
 
             return res.json({ message: "Part confirmed" });
 
         } catch (error) {
-            console.error("Confirm Part Error:", error);
-            return res.status(500).json({ error: "Failed to confirm part" });
+            next(error);
         }
     }
 
@@ -101,9 +100,9 @@ export class UploadController {
             }
 
             const partsMap = video.parts || {};
-            const partsArray = Object.entries(partsMap).map(([partNum, etag]) => ({
+            const partsArray = Object.entries(partsMap).map(([partNum, partData]) => ({
                 PartNumber: Number(partNum),
-                ETag: etag as string
+                ETag: partData.etag // Access nested etag property
             })).sort((a, b) => a.PartNumber - b.PartNumber);
 
             if (partsArray.length === 0) {

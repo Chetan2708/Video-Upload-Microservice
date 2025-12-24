@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import mongoose from 'mongoose';
 import apiRoutes from './routes/api.routes';
-import { errorHandler } from './interface-adapters/middleware/errorMiddleware';
+import { errorMiddleware } from './interface-adapters/middleware/errorMiddleware';
 import { config } from './core/config/config';
 
 const app = express();
@@ -35,7 +35,7 @@ mongoose.connect(MONGO_URI)
 
 app.use('/api/v1', apiRoutes);
 
-app.use(errorHandler);
+app.use(errorMiddleware);
 
 const PORT = config.port;
 

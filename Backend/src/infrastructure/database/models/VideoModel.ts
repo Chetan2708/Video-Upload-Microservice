@@ -19,7 +19,10 @@ const videoSchema = new Schema<IVideoJob>({
     processedFiles: { type: [String], default: [] },
     parts: {
         type: Map,
-        of: String,
+        of: new Schema({
+            etag: { type: String, required: true },
+            confirmedAt: { type: Date, required: true }
+        }, { _id: false }),
         default: {}
     }
 }, {
