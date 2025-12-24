@@ -53,35 +53,51 @@ export class MongoVideoRepository implements IVideoRepository {
         );
 
         if (res.matchedCount === 0) {
-            // Failure Analysis
             const existing = await VideoModel.findOne({ videoId }, { [`parts.${part.PartNumber}`]: 1, status: 1 }).lean();
 
             if (!existing) {
                 throw new NotFoundError("Video not found");
             }
 
-            // Check state
             if (existing.status !== 'INITIATED' && existing.status !== 'UPLOADING') {
                 throw new ConflictError(`Invalid state: ${existing.status}`);
             }
 
-            // Check part conflict
-            // @ts-ignore
             const existingPart = existing.parts?.[String(part.PartNumber)];
             if (existingPart && existingPart.etag !== part.ETag) {
                 throw new ConflictError("Part already confirmed with different ETag");
             }
 
-            // Unknown reason
             throw new AppError("Concurrent modification or unknown error", 500);
         }
 
         return true;
     }
 
-    async markAsUploaded(videoId: string): Promise<boolean> {
-        const res = await VideoModel.updateOne(
+    async tryAcquireCompletionLock(videoId: string): Promise<IVideoJob | null> {
+        const res = await VideoModel.findOneAndUpdate(
             { videoId, status: 'UPLOADING' },
+            {
+                $set: {
+                    status: 'COMPLETING',
+                    completingAt: new Date()
+                }
+            },
+            { new: true }
+        ).lean();
+        return res;
+    }
+
+    async persistCompletionSnapshot(videoId: string, parts: { PartNumber: number; ETag: string }[]): Promise<void> {
+        await VideoModel.updateOne(
+            { videoId, status: 'COMPLETING' },
+            { $set: { completionParts: parts } }
+        );
+    }
+
+    async finalizeUpload(videoId: string): Promise<boolean> {
+        const res = await VideoModel.updateOne(
+            { videoId, status: 'COMPLETING' },
             { $set: { status: 'UPLOADED' } }
         );
         return res.modifiedCount > 0;

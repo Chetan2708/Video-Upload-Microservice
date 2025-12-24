@@ -2,7 +2,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { IStorageService } from '../../core/interfaces/IStorageService';
 import { IVideoRepository } from '../../core/interfaces/IVideoRepository';
-import { NotFoundError, ConflictError } from '../../core/errors/AppError';
+import { NotFoundError, ConflictError, AppError } from '../../core/errors/AppError';
 
 export class UploadController {
     constructor(
@@ -84,54 +84,65 @@ export class UploadController {
         }
     }
 
-    completeUpload = async (req: Request, res: Response) => {
+    completeUpload = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const { videoId } = req.body;
+            let video = await this.videoRepo.findById(videoId);
 
-            const video = await this.videoRepo.findById(videoId);
             if (!video) {
-                return res.status(404).json({ error: "Video not found" });
+                throw new NotFoundError("Video not found");
             }
 
-            // Explicitly validate status before S3 call, though atomic transition will catch race conditions later
-            // This reads slightly stale data but saves an S3 call if already obvious
-            if (video.status !== 'UPLOADING') { // Strict check: must have started uploading
-                return res.status(409).json({ error: `Cannot complete upload in status ${video.status}` });
+            if (video.status === 'UPLOADED') {
+                return res.json({ message: "Upload complete", status: 'UPLOADED' });
             }
 
-            const partsMap = video.parts || {};
-            const partsArray = Object.entries(partsMap).map(([partNum, partData]) => ({
-                PartNumber: Number(partNum),
-                ETag: partData.etag // Access nested etag property
-            })).sort((a, b) => a.PartNumber - b.PartNumber);
-
-            if (partsArray.length === 0) {
-                return res.status(400).json({ error: "No parts found for this video" });
+            if (video.status === 'COMPLETING') {
+                if (video.completionParts?.length) {
+                    await this.videoRepo.finalizeUpload(videoId);
+                    return res.json({ message: "Upload complete", status: 'UPLOADED' });
+                }
+                return res.status(202).json({ message: "Completion in progress" });
             }
 
-            await this.s3Service.completeMultipartUpload(video.s3Key, video.uploadId, partsArray);
+            if (video.status === 'UPLOADING') {
+                const lockedVideo = await this.videoRepo.tryAcquireCompletionLock(videoId);
 
-            const success = await this.videoRepo.markAsUploaded(videoId);
+                if (!lockedVideo) {
+                    // Race condition hit: Someone else likely locked it. Check state again.
+                    const freshVideo = await this.videoRepo.findById(videoId);
+                    if (freshVideo?.status === 'UPLOADED') return res.json({ message: "Upload complete", status: 'UPLOADED' });
+                    if (freshVideo?.status === 'COMPLETING') return res.status(202).json({ message: "Completion in progress" });
+                    // Should not really happen if logic is correct, but fail safe
+                    throw new ConflictError("Concurrent completion in progress");
+                }
 
-            if (!success) {
-                // S3 completed but DB failed transition? This implies race or state changed.
-                // In a real system we might need reconciliation or revert S3??
-                // For now, fail request.
-                return res.status(409).json({ error: "Failed to transition to UPLOADED status" });
+                // Lock Acquired. We own the transition.
+                // Phase 1: Snapshot
+                const partsMap = lockedVideo.parts || {};
+                const partsArray = Object.entries(partsMap).map(([partNum, partData]) => ({
+                    PartNumber: Number(partNum),
+                    ETag: partData.etag
+                })).sort((a, b) => a.PartNumber - b.PartNumber);
+
+                if (partsArray.length === 0) {
+                    // TODO: Rollback lock? For now just throw
+                    throw new AppError("No parts found", 400);
+                }
+
+                await this.videoRepo.persistCompletionSnapshot(videoId, partsArray);
+
+                // Phase 2: Execute
+                await this.s3Service.completeMultipartUpload(lockedVideo.s3Key, lockedVideo.uploadId, partsArray);
+                await this.videoRepo.finalizeUpload(videoId);
+
+                return res.json({ message: "Upload complete", status: 'UPLOADED' });
             }
 
-            const result = {
-                videoId: video.videoId,
-                fileName: video.fileName,
-                fileSize: video.fileSize,
-                status: 'UPLOADED',
-            };
-
-            return res.json({ message: "Upload complete", result });
+            throw new ConflictError(`Cannot complete upload in status ${video.status}`);
 
         } catch (error) {
-            console.error("Complete Upload Error:", error);
-            return res.status(500).json({ error: "Failed to complete upload" });
+            next(error);
         }
     }
 }

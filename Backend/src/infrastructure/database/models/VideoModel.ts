@@ -13,8 +13,16 @@ const videoSchema = new Schema<IVideoJob>({
     s3Key: { type: String, required: true },
     status: {
         type: String,
-        enum: ["INITIATED", "UPLOADING", "UPLOADED", "PROCESSING", "DONE", "FAILED"],
+        enum: ["INITIATED", "UPLOADING", "COMPLETING", "UPLOADED", "PROCESSING", "DONE", "FAILED"],
         default: "INITIATED"
+    },
+    completingAt: { type: Date },
+    completionParts: {
+        type: [{
+            PartNumber: Number,
+            ETag: String
+        }],
+        default: []
     },
     processedFiles: { type: [String], default: [] },
     parts: {
