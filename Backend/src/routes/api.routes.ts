@@ -1,20 +1,14 @@
 
 import { Router } from 'express';
-import { UploadController } from '../interface-adapters/controllers/UploadController';
-import { VideoController } from '../interface-adapters/controllers/VideoController';
-import { S3StorageService } from '../infrastructure/aws/S3StorageService';
-import { MongoVideoRepository } from '../infrastructure/repositories/MongoVideoRepository';
+import { ServiceContainer } from '../core/di/ServiceContainer';
+import { body } from 'express-validator';
+import { validate } from '../interface-adapters/middleware/validationMiddleware';
 
 const router = Router();
 
-const s3Service = new S3StorageService();
-const videoRepo = new MongoVideoRepository();
-
-const uploadController = new UploadController(s3Service, videoRepo);
-const videoController = new VideoController(videoRepo, s3Service);
-
-import { body } from 'express-validator';
-import { validate } from '../interface-adapters/middleware/validationMiddleware';
+const services = ServiceContainer.getInstance();
+const uploadController = services.uploadController;
+const videoController = services.videoController;
 
 /**
  * @swagger

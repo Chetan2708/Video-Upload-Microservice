@@ -111,4 +111,27 @@ export class MongoVideoRepository implements IVideoRepository {
         );
         return res.modifiedCount > 0;
     }
+
+    async findStaleUploads(criteria: { status: IVideoJob['status']; olderThan: Date }): Promise<IVideoJob[]> {
+        return await VideoModel.find({
+            status: criteria.status,
+            createdAt: { $lt: criteria.olderThan }
+        }).lean();
+    }
+
+    async markAsFailed(videoId: string, reason: string): Promise<boolean> {
+        const res = await VideoModel.updateOne(
+            {
+                videoId,
+                status: { $in: ['INITIATED', 'UPLOADING', 'COMPLETING'] }
+            },
+            {
+                $set: {
+                    status: 'FAILED',
+                    failureReason: reason
+                }
+            }
+        );
+        return res.modifiedCount > 0;
+    }
 }

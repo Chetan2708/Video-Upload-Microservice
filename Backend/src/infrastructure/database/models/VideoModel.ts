@@ -16,6 +16,7 @@ const videoSchema = new Schema<IVideoJob>({
         enum: ["INITIATED", "UPLOADING", "COMPLETING", "UPLOADED", "PROCESSING", "DONE", "FAILED"],
         default: "INITIATED"
     },
+    failureReason: { type: String },
     completingAt: { type: Date },
     completionParts: {
         type: [{

@@ -4,7 +4,8 @@ import {
     CreateMultipartUploadCommand,
     UploadPartCommand,
     CompleteMultipartUploadCommand,
-    GetObjectCommand
+    GetObjectCommand,
+    AbortMultipartUploadCommand
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { v4 as uuidv4 } from "uuid";
@@ -76,5 +77,15 @@ export class S3StorageService implements IStorageService {
         });
 
         return await getSignedUrl(this.s3Client, command, { expiresIn: 3600 });
+    }
+
+    async abortMultipartUpload(key: string, uploadId: string): Promise<void> {
+        const command = new AbortMultipartUploadCommand({
+            Bucket: this.bucketName,
+            Key: key,
+            UploadId: uploadId
+        });
+
+        await this.s3Client.send(command);
     }
 }

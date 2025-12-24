@@ -7,6 +7,7 @@ export interface IVideoJob {
     uploadId: string;
     s3Key: string;
     status: "INITIATED" | "UPLOADING" | "COMPLETING" | "UPLOADED" | "PROCESSING" | "DONE" | "FAILED";
+    failureReason?: string;
     completingAt?: Date;
     completionParts?: { PartNumber: number; ETag: string }[];
     processedFiles: string[];
@@ -26,4 +27,8 @@ export interface IVideoRepository {
     findByUserId(userId: string): Promise<IVideoJob[]>;
     findById(videoId: string): Promise<IVideoJob | null>;
     findByIdAndUser(videoId: string, userId: string): Promise<IVideoJob | null>;
+
+    // Cleanup methods
+    findStaleUploads(criteria: { status: IVideoJob['status']; olderThan: Date }): Promise<IVideoJob[]>;
+    markAsFailed(videoId: string, reason: string): Promise<boolean>;
 }
