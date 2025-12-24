@@ -31,11 +31,17 @@ import { validate } from '../interface-adapters/middleware/validationMiddleware'
  *             required:
  *               - fileName
  *               - contentType
+ *               - userId
+ *               - fileSize
  *             properties:
  *               fileName:
  *                 type: string
  *               contentType:
  *                 type: string
+ *               userId:
+ *                 type: string
+ *               fileSize:
+ *                 type: number
  *     responses:
  *       200:
  *         description: Upload initialized successfully
@@ -48,7 +54,9 @@ import { validate } from '../interface-adapters/middleware/validationMiddleware'
  */
 router.post('/upload/init', validate([
     body('fileName').isString(),
-    body('contentType').isString()
+    body('contentType').isString(),
+    body('userId').isString(),
+    body('fileSize').isNumeric()
 ]), uploadController.initializeUpload);
 
 /**
@@ -64,13 +72,10 @@ router.post('/upload/init', validate([
  *           schema:
  *             type: object
  *             required:
- *               - key
- *               - uploadId
+ *               - videoId
  *               - partNumber
  *             properties:
- *               key:
- *                 type: string
- *               uploadId:
+ *               videoId:
  *                 type: string
  *               partNumber:
  *                 type: number
@@ -86,10 +91,45 @@ router.post('/upload/init', validate([
  *                   type: string
  * */
 router.post('/upload/sign-part', validate([
-    body('key').isString(),
-    body('uploadId').isString(),
+    body('videoId').isString(),
     body('partNumber').isNumeric()
 ]), uploadController.signPart);
+
+/**
+ * @swagger
+ * /upload/{videoId}/parts:
+ *   post:
+ *     summary: Confirm a part upload
+ *     tags: [Upload]
+ *     parameters:
+ *       - in: path
+ *         name: videoId
+ *         required: true
+ *         schema:
+ *             type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - partNumber
+ *               - etag
+ *             properties:
+ *               partNumber:
+ *                 type: number
+ *               etag:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Part confirmed
+ */
+router.post('/upload/confirm-part', validate([
+    body('videoId').isString(),
+    body('partNumber').isNumeric(),
+    body('etag').isString()
+]), uploadController.confirmPart);
 
 /**
  * @swagger
@@ -104,23 +144,10 @@ router.post('/upload/sign-part', validate([
  *           schema:
  *             type: object
  *             required:
- *               - key
- *               - uploadId
- *               - parts
+ *               - videoId
  *             properties:
- *               key:
+ *               videoId:
  *                 type: string
- *               uploadId:
- *                 type: string
- *               parts:
- *                 type: array
- *                 items:
- *                   type: object
- *                   properties:
- *                     ETag:
- *                       type: string
- *                     PartNumber:
- *                       type: number
  *     responses:
  *       200:
  *         description: Upload completed successfully
@@ -130,9 +157,7 @@ router.post('/upload/sign-part', validate([
  *               $ref: '#/components/schemas/Video'
  */
 router.post('/upload/complete', validate([
-    body('key').isString(),
-    body('uploadId').isString(),
-    body('parts').isArray()
+    body('videoId').isString()
 ]), uploadController.completeUpload);
 
 /**

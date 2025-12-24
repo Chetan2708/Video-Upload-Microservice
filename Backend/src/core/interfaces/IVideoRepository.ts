@@ -6,8 +6,9 @@ export interface IVideoJob {
     fileSize: number;
     uploadId: string;
     s3Key: string;
-    status: "uploading" | "uploaded" | "processing" | "completed" | "failed";
+    status: "INITIATED" | "UPLOADING" | "UPLOADED" | "PROCESSING" | "DONE" | "FAILED";
     processedFiles: string[];
+    parts: { PartNumber: number; ETag: string }[];
     createdAt: Date;
     updatedAt: Date;
 }
@@ -15,6 +16,8 @@ export interface IVideoJob {
 export interface IVideoRepository {
     create(video: Partial<IVideoJob>): Promise<IVideoJob>;
     updateStatus(uploadId: string, status: IVideoJob['status']): Promise<IVideoJob | null>;
+    addPart(videoId: string, part: { PartNumber: number; ETag: string }): Promise<boolean>;
+    markAsUploaded(videoId: string): Promise<boolean>;
     findByUploadId(uploadId: string): Promise<IVideoJob | null>;
     findByUserId(userId: string): Promise<IVideoJob[]>;
     findById(videoId: string): Promise<IVideoJob | null>;

@@ -29,4 +29,23 @@ export class MongoVideoRepository implements IVideoRepository {
             { new: true }
         ).lean();
     }
+
+    async addPart(videoId: string, part: { PartNumber: number; ETag: string }): Promise<boolean> {
+        const res = await VideoModel.updateOne(
+            { videoId, status: { $in: ['INITIATED', 'UPLOADING'] } },
+            {
+                $push: { parts: part },
+                $set: { status: 'UPLOADING' }
+            }
+        );
+        return res.modifiedCount > 0;
+    }
+
+    async markAsUploaded(videoId: string): Promise<boolean> {
+        const res = await VideoModel.updateOne(
+            { videoId, status: 'UPLOADING' },
+            { $set: { status: 'UPLOADED' } }
+        );
+        return res.modifiedCount > 0;
+    }
 }

@@ -22,16 +22,14 @@ export class UploadService {
 
     async uploadChunk(
         file: File,
-        uploadId: string,
-        key: string,
+        videoId: string,
         partNumber: number,
         start: number,
         end: number
-    ): Promise<UploadPart> {
+    ): Promise<void> {
 
         const { data } = await axios.post(`${this.baseUrl}/upload/sign-part`, {
-            uploadId,
-            key,
+            videoId,
             partNumber
         });
 
@@ -47,24 +45,16 @@ export class UploadService {
 
         const ETag = uploadRes.headers.get("ETag")!.replace(/"/g, "");
 
-        return { PartNumber: partNumber, ETag };
+        await axios.post(`${this.baseUrl}/upload/confirm-part`, {
+            videoId,
+            partNumber,
+            etag: ETag
+        });
     }
 
-    async completeUpload(
-        key: string,
-        uploadId: string,
-        parts: UploadPart[],
-        file: File,
-        userId: string
-    ) {
+    async completeUpload(videoId: string) {
         const { data } = await axios.post(`${this.baseUrl}/upload/complete`, {
-            uploadId,
-            key,
-            parts,
-            userId,
-            fileName: file.name,
-            fileSize: file.size,
-            contentType: file.type
+            videoId
         });
 
         return data as CompleteUploadResponse;
@@ -75,10 +65,9 @@ export class UploadService {
         userId: string,
         onProgress: (p: number) => void
     ) {
-        const { uploadId, key } = await this.initiateUpload(file, userId);
+        const { videoId } = await this.initiateUpload(file, userId);
 
         const totalParts = Math.ceil(file.size / CHUNK_SIZE);
-        const parts: UploadPart[] = [];
         let completed = 0;
 
         const tasks: (() => Promise<void>)[] = [];
@@ -88,8 +77,7 @@ export class UploadService {
             const end = Math.min(start + CHUNK_SIZE, file.size);
 
             tasks.push(async () => {
-                const part = await this.uploadChunk(file, uploadId, key, partNumber, start, end);
-                parts.push(part);
+                await this.uploadChunk(file, videoId, partNumber, start, end);
                 completed++;
                 onProgress(Math.round((completed / totalParts) * 100));
             });
@@ -97,7 +85,7 @@ export class UploadService {
 
         await this.processQueue(tasks, MAX_CONCURRENCY);
 
-        const response = await this.completeUpload(key, uploadId, parts, file, userId);
+        const response = await this.completeUpload(videoId);
 
         return response.result;
     }

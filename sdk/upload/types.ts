@@ -4,9 +4,9 @@ export interface UploadPart {
 }
 
 export interface InitUploadResponse {
+    videoId: string;
     uploadId: string;
     key: string;
-    videoId?: string;
 }
 
 export interface CompleteUploadResponse {
