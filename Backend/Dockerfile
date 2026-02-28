@@ -20,6 +20,8 @@ RUN pnpm run build
 # Production stage
 FROM node:20-alpine
 
+ENV NODE_ENV=production
+
 WORKDIR /app
 
 RUN npm install -g pnpm
