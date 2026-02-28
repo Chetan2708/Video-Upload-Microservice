@@ -1,68 +1,46 @@
-
-import { Request, Response } from 'express';
-import { IVideoRepository } from '../../core/interfaces/IVideoRepository';
-import { IStorageService } from '../../core/interfaces/IStorageService';
+import { Request, Response, NextFunction } from 'express';
+import { VideoService } from '../../core/services/VideoService';
 
 export class VideoController {
     constructor(
-        private videoRepo: IVideoRepository,
-        private s3Service: IStorageService
+        private videoService: VideoService
     ) { }
 
-    getUserVideos = async (req: Request, res: Response) => {
+    getUserVideos = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const { userId } = req.query;
 
             if (!userId) {
-                return res.status(400).json({ error: "userId required" });
+                res.status(400).json({ error: "userId required" });
+                return;
             }
 
-            const videos = await this.videoRepo.findByUserId(userId as string);
-            return res.json({ videos });
+            const videos = await this.videoService.getUserVideos(userId as string);
+            res.json({ videos });
         } catch (error) {
-            console.error("Get Videos Error:", error);
-            return res.status(500).json({ error: "Failed to fetch videos" });
+            next(error);
         }
     }
 
-    getVideo = async (req: Request, res: Response) => {
+    getVideo = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const { videoId } = req.params;
 
-            const video = await this.videoRepo.findById(videoId);
-
-            if (!video) {
-                return res.status(404).json({ error: "Video not found" });
-            }
-
-            let url = null;
-            if (video.s3Key) {
-                try {
-                    url = await this.s3Service.generatePresignedDownloadUrl(video.s3Key);
-                } catch (e) {
-                    console.error("Failed to sign url", e);
-                }
-            }
-
-            return res.json({ video: { ...video, url } });
+            const video = await this.videoService.getVideoWithPresignedUrl(videoId);
+            res.json({ video });
         } catch (error) {
-            console.error("Get Video Error:", error);
-            return res.status(500).json({ error: "Failed to fetch video" });
+            next(error);
         }
     }
-    getVideoStatus = async (req: Request, res: Response) => {
+
+    getVideoStatus = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const { videoId } = req.params;
-            const video = await this.videoRepo.findById(videoId);
 
-            if (!video) {
-                return res.status(404).json({ error: "Video not found" });
-            }
-
-            return res.json({ status: video.status });
+            const status = await this.videoService.getVideoStatus(videoId);
+            res.json({ status });
         } catch (error) {
-            console.error("Get Video Status Error:", error);
-            return res.status(500).json({ error: "Failed to fetch video status" });
+            next(error);
         }
     }
 }

@@ -1,5 +1,6 @@
 import { IVideoRepository } from '../interfaces/IVideoRepository';
 import { IStorageService } from '../interfaces/IStorageService';
+import { logger } from '../utils/logger';
 
 export class CleanupService {
     constructor(
@@ -8,7 +9,7 @@ export class CleanupService {
     ) { }
 
     async cleanupStaleUploads() {
-        console.log('[CleanupService] Starting cleanup job...');
+        logger.info('[CleanupService] Starting cleanup job...');
 
         const policies = [
             { status: 'INITIATED' as const, ttlRequests: 24 * 60 * 60 * 1000 },
@@ -21,30 +22,30 @@ export class CleanupService {
         for (const policy of policies) {
             try {
                 const olderThan = new Date(now.getTime() - policy.ttlRequests);
-                console.log(`[CleanupService] Checking for ${policy.status} uploads older than ${olderThan.toISOString()}`);
+                logger.info(`[CleanupService] Checking for ${policy.status} uploads older than ${olderThan.toISOString()}`);
 
                 const staleJobs = await this.videoRepo.findStaleUploads({
                     status: policy.status,
                     olderThan: olderThan
                 });
 
-                console.log(`[CleanupService] Found ${staleJobs.length} stale ${policy.status} uploads.`);
+                logger.info(`[CleanupService] Found ${staleJobs.length} stale ${policy.status} uploads.`);
 
                 for (const job of staleJobs) {
                     await this.processStaleJob(job.videoId, job.s3Key, job.uploadId);
                 }
 
             } catch (err) {
-                console.error(`[CleanupService] Error processing policy ${policy.status}:`, err);
+                logger.error({ err }, `[CleanupService] Error processing policy ${policy.status}`);
             }
         }
 
-        console.log('[CleanupService] Cleanup job finished.');
+        logger.info('[CleanupService] Cleanup job finished.');
     }
 
     private async processStaleJob(videoId: string, s3Key: string, uploadId: string) {
         try {
-            console.log(`[CleanupService] Aborting upload for videoId=${videoId}`);
+            logger.info({ videoId }, '[CleanupService] Aborting upload for video');
 
             // 1. Abort S3 Multipart Upload
             // This is idempotent, so it's safe to call even if already aborted.
@@ -53,10 +54,10 @@ export class CleanupService {
             // 2. Mark DB as FAILED
             await this.videoRepo.markAsFailed(videoId, 'EXPIRED');
 
-            console.log(`[CleanupService] Successfully cleaned up videoId=${videoId}`);
+            logger.info({ videoId }, '[CleanupService] Successfully cleaned up video');
 
         } catch (err) {
-            console.error(`[CleanupService] Failed to cleanup videoId=${videoId}`, err);
+            logger.error({ err, videoId }, '[CleanupService] Failed to cleanup video');
         }
     }
 }

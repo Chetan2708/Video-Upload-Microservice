@@ -5,9 +5,9 @@ export class UploadClient {
     private uploadService: UploadService;
     public videos: VideoClient;
 
-    constructor(baseUrl: string) {
-        this.uploadService = new UploadService(baseUrl);
-        this.videos = new VideoClient(baseUrl);
+    constructor(baseUrl: string, authToken: string) {
+        this.uploadService = new UploadService(baseUrl, authToken);
+        this.videos = new VideoClient(baseUrl, authToken);
     }
 
     upload(
@@ -15,6 +15,6 @@ export class UploadClient {
         userId: string,
         onProgress: (percent: number) => void
     ) {
-        return this.uploadService.uploadFile(file, userId, onProgress);
+        return this.uploadService.uploadFile(file, onProgress);
     }
 }

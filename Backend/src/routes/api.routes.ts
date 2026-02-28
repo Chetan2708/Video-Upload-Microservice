@@ -1,10 +1,18 @@
-
 import { Router } from 'express';
 import { ServiceContainer } from '../core/di/ServiceContainer';
 import { body } from 'express-validator';
 import { validate } from '../interface-adapters/middleware/validationMiddleware';
+import rateLimit from 'express-rate-limit';
 
 const router = Router();
+
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // limit each IP to 100 requests per windowMs
+    message: { error: 'Too many requests from this IP, please try again later.' }
+});
+
+router.use(limiter);
 
 const services = ServiceContainer.getInstance();
 const uploadController = services.uploadController;
@@ -49,7 +57,6 @@ const videoController = services.videoController;
 router.post('/upload/init', validate([
     body('fileName').isString(),
     body('contentType').isString(),
-    body('userId').isString(),
     body('fileSize').isNumeric()
 ]), uploadController.initializeUpload);
 

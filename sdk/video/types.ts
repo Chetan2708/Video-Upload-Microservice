@@ -1,3 +1,5 @@
+export type VideoStatus = "INITIATED" | "UPLOADING" | "COMPLETING" | "UPLOADED" | "PROCESSING" | "DONE" | "FAILED";
+
 export interface VideoMeta {
     _id: string;
     key: string;
@@ -5,7 +7,7 @@ export interface VideoMeta {
     fileSize: number;
     contentType: string;
     userId: string;
-    status: "uploading" | "uploaded" | "processing" | "ready" | "failed";
+    status: VideoStatus;
     createdAt: string;
     updatedAt: string;
 }
