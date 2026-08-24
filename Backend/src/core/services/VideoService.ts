@@ -14,6 +14,11 @@ export class VideoService {
         return await this.videoRepo.findByUserId(userId);
     }
 
+    async getVideosBulk(videoIds: string[]): Promise<IVideoJob[]> {
+        logger.info({ count: videoIds.length }, 'Fetching multiple videos by IDs');
+        return await this.videoRepo.findByIds(videoIds);
+    }
+
     async getVideoWithPresignedUrl(videoId: string): Promise<IVideoJob & { url: string | null }> {
         logger.info({ videoId }, 'Fetching video details');
         const video = await this.videoRepo.findById(videoId);

@@ -8,7 +8,7 @@ export class VideoController {
 
     getUserVideos = async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const { userId } = req.query;
+            const userId = req.user?.id || req.query.userId;
 
             if (!userId) {
                 res.status(400).json({ error: "userId required" });
@@ -16,6 +16,22 @@ export class VideoController {
             }
 
             const videos = await this.videoService.getUserVideos(userId as string);
+            res.json({ videos });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    getVideosBulk = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { videoIds } = req.body;
+            
+            if (!Array.isArray(videoIds)) {
+                res.status(400).json({ error: "videoIds must be an array" });
+                return;
+            }
+
+            const videos = await this.videoService.getVideosBulk(videoIds);
             res.json({ videos });
         } catch (error) {
             next(error);

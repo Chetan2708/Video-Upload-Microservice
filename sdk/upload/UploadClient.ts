@@ -12,7 +12,6 @@ export class UploadClient {
 
     upload(
         file: File,
-        userId: string,
         onProgress: (percent: number) => void
     ) {
         return this.uploadService.uploadFile(file, onProgress);

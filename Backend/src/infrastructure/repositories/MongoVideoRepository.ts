@@ -18,6 +18,12 @@ export class MongoVideoRepository implements IVideoRepository {
         return await VideoModel.findOne({ videoId }).lean();
     }
 
+    async findByIds(videoIds: string[]): Promise<IVideoJob[]> {
+        return await VideoModel.find({ videoId: { $in: videoIds } })
+            .select('videoId fileName contentType fileSize status createdAt updatedAt uploadUrl -_id')
+            .lean();
+    }
+
     async findByUserId(userId: string): Promise<IVideoJob[]> {
         return await VideoModel.find({ userId }).sort({ createdAt: -1 }).lean();
     }

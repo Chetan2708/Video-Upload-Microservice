@@ -26,6 +26,7 @@ export interface IVideoRepository {
     findByUploadId(uploadId: string): Promise<IVideoJob | null>;
     findByUserId(userId: string): Promise<IVideoJob[]>;
     findById(videoId: string): Promise<IVideoJob | null>;
+    findByIds(videoIds: string[]): Promise<IVideoJob[]>;
     findByIdAndUser(videoId: string, userId: string): Promise<IVideoJob | null>;
 
     // Cleanup methods

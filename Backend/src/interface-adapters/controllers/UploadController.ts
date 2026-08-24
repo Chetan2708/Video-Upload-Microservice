@@ -12,7 +12,7 @@ export class UploadController {
             const userId = req.user!.id;
 
             if (!fileName || !contentType || !fileSize) {
-                res.status(400).json({ error: "Missing required fields" });
+                res.status(400).json({ error: "Missing required fields: fileName, contentType, fileSize" });
                 return;
             }
 

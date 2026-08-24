@@ -1,6 +1,6 @@
-export * from "./upload/UploadClient";
-export * from "./upload/types";
+export * from "./upload/UploadClient.js";
+export * from "./upload/types.js";
 
-export * from "./video/VideoClient";
-export * from "./video/types";
+export * from "./video/VideoClient.js";
+export * from "./video/types.js";
 

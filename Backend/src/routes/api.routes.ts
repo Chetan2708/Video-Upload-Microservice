@@ -8,8 +8,8 @@ const router = Router();
 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
-    message: { error: 'Too many requests from this IP, please try again later.' }
+    max: 1000, // limit each IP to 1000 requests per windowMs
+    message: 'Too many requests from this IP, please try again later.'
 });
 
 router.use(limiter);
@@ -178,6 +178,31 @@ router.post('/upload/complete', validate([
  *                 $ref: '#/components/schemas/Video'
  */
 router.get('/videos', videoController.getUserVideos);
+
+/**
+ * @swagger
+ * /videos/bulk:
+ *   post:
+ *     summary: Get multiple videos by ID
+ *     tags: [Videos]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               videoIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: List of videos
+ */
+router.post('/videos/bulk', validate([
+    body('videoIds').isArray()
+]), videoController.getVideosBulk);
 /**
  * @swagger
  * /videos/{videoId}:
