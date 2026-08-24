@@ -13,7 +13,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "./ui/alert-dialog";
-import { Folder, LogOut, Plus, Trash2, Video } from 'lucide-react';
+import { Folder, LogOut, Plus, Trash2, Video, Info } from 'lucide-react';
 
 interface SidebarProps {
     projects: Project[];
@@ -23,17 +23,27 @@ interface SidebarProps {
     onDeleteProject: (id: string, e: React.MouseEvent) => void;
     onCreateProject: () => void;
     onLogout: () => void;
+    onShowArchitecture?: () => void;
+    isMobile?: boolean;
+    onCloseMobile?: () => void;
 }
 
-export const Sidebar = ({
+const SidebarContent = ({
     projects,
     selectedProject,
     user,
     onSelectProject,
     onDeleteProject,
     onCreateProject,
-    onLogout
+    onLogout,
+    onShowArchitecture,
+    onCloseMobile,
 }: SidebarProps) => {
+    const handleProjectClick = (project: Project) => {
+        onSelectProject(project);
+        onCloseMobile?.();
+    };
+
     return (
         <aside className="w-64 h-full bg-slate-900 border-r border-slate-800 flex flex-col text-slate-200">
             <div className="p-4 flex items-center gap-2 text-xl font-bold border-b border-slate-800">
@@ -57,7 +67,7 @@ export const Sidebar = ({
                                 key={project.id}
                                 variant={isActive ? "secondary" : "ghost"}
                                 className={`w-full justify-start h-11 ${isActive ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'hover:bg-slate-800'}`}
-                                onClick={() => onSelectProject(project)}
+                                onClick={() => handleProjectClick(project)}
                             >
                                 <Folder className="mr-3 w-5 h-5 text-yellow-400 fill-yellow-400" />
                                 <span className="flex-1 text-left truncate text-sm">{project.name}</span>
@@ -75,6 +85,22 @@ export const Sidebar = ({
                     })}
                 </div>
             </ScrollArea>
+
+            {onShowArchitecture && (
+                <>
+                    <Separator className="bg-slate-800" />
+                    <div className="px-3 py-2">
+                        <Button
+                            variant="ghost"
+                            className="w-full justify-start h-10 hover:bg-slate-800 text-slate-400"
+                            onClick={() => { onShowArchitecture(); onCloseMobile?.(); }}
+                        >
+                            <Info className="mr-3 w-4 h-4" />
+                            <span className="text-sm">How It Works</span>
+                        </Button>
+                    </div>
+                </>
+            )}
 
             <Separator className="bg-slate-800" />
 
@@ -108,4 +134,22 @@ export const Sidebar = ({
             </div>
         </aside>
     );
+};
+
+export const Sidebar = (props: SidebarProps) => {
+    const { isMobile, onCloseMobile } = props;
+
+    // On mobile, render inside a drawer wrapper
+    if (isMobile) {
+        return (
+            <div className={`sidebar-mobile-wrapper ${props.isMobile ? 'open' : ''}`}>
+                <div className="sidebar-overlay" onClick={onCloseMobile} />
+                <div className="sidebar-drawer">
+                    <SidebarContent {...props} />
+                </div>
+            </div>
+        );
+    }
+
+    return <SidebarContent {...props} />;
 };

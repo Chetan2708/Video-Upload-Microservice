@@ -6,19 +6,23 @@ import type { VideoMeta, VideoWithUrl } from '../types';
 interface UseVideosReturn {
     videos: VideoMeta[];
     loading: boolean;
+    error: string | null;
     playingVideo: VideoWithUrl | null;
     loadVideos: (projectId: string) => Promise<void>;
     playVideo: (videoId: string) => Promise<void>;
     closePlayer: () => void;
+    retryLoadVideos: (projectId: string) => void;
 }
 
 export const useVideos = (projectId: string | null): UseVideosReturn => {
     const [videos, setVideos] = useState<VideoMeta[]>([]);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [playingVideo, setPlayingVideo] = useState<VideoWithUrl | null>(null);
 
     const loadVideos = useCallback(async (pid: string) => {
         setLoading(true);
+        setError(null);
         try {
             const videoIds = await projectApi.getProjectVideos(pid);
             if (videoIds.length === 0) {
@@ -28,9 +32,10 @@ export const useVideos = (projectId: string | null): UseVideosReturn => {
             
             // Switch from looping individual HTTP fetches (which tripped the rate limit) to a single bulk POST payload
             const vids = await videoApi.getVideosBulk(videoIds);
-            setVideos(vids as any);
+            setVideos(vids as VideoMeta[]);
         } catch (err) {
             console.error(err);
+            setError(err instanceof Error ? err.message : 'Failed to load videos');
         } finally {
             setLoading(false);
         }
@@ -41,6 +46,7 @@ export const useVideos = (projectId: string | null): UseVideosReturn => {
             loadVideos(projectId);
         } else {
             setVideos([]);
+            setError(null);
         }
     }, [projectId, loadVideos]);
 
@@ -53,5 +59,9 @@ export const useVideos = (projectId: string | null): UseVideosReturn => {
         setPlayingVideo(null);
     }, []);
 
-    return { videos, loading, playingVideo, loadVideos, playVideo, closePlayer };
+    const retryLoadVideos = useCallback((pid: string) => {
+        loadVideos(pid);
+    }, [loadVideos]);
+
+    return { videos, loading, error, playingVideo, loadVideos, playVideo, closePlayer, retryLoadVideos };
 };
