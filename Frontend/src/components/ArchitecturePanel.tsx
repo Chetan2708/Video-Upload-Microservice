@@ -95,8 +95,8 @@ export const ArchitecturePanel = () => {
                 </p>
                 <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8 }}>
                     API documentation is available at{' '}
-                    <a href="http://localhost:5001/docs" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)' }}>
-                        localhost:5001/docs
+                    <a href={import.meta.env.VITE_VIDEO_API_URL + '/docs'} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)' }}>
+                        docs
                     </a>
                 </p>
             </div>
