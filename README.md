@@ -13,6 +13,8 @@ flowchart LR
     VideoAPI --> Mongo
     VideoAPI -->|create/sign/complete| S3[(Amazon S3)]
     Browser -->|presigned PUT chunks| S3
+    VideoAPI -->|Trigger Transcode| MediaConvert[(AWS MediaConvert)]
+    MediaConvert -->|720p Output| S3
     VideoAPI -->|presigned GET URL| Browser
 ```
 
@@ -165,8 +167,9 @@ Useful endpoints:
 | `POST` | `/api/v1/upload/sign-part` | Create a presigned part URL |
 | `POST` | `/api/v1/upload/confirm-part` | Persist a completed part and ETag |
 | `POST` | `/api/v1/upload/complete` | Complete the S3 upload |
+| `POST` | `/api/v1/videos/:videoId/transcode` | Initiate 720p optimization (Costs 1 Credit) |
 | `GET` | `/api/v1/videos` | List videos |
-| `GET` | `/api/v1/videos/:videoId` | Get metadata and a presigned download URL |
+| `GET` | `/api/v1/videos/:videoId` | Get metadata and presigned URLs (original + mp4Url) |
 | `GET` | `/api/v1/videos/status/:videoId` | Read upload status |
 
 The complete OpenAPI UI is available at `/docs` on the video backend.
@@ -195,8 +198,8 @@ Uploads use 5 MB chunks and up to three concurrent part uploads. The SDK retries
 - **Presigned S3 URLs:** large file bytes bypass the API servers, reducing memory pressure and network transfer through Express.
 - **Multipart uploads:** files are split into resumable, independently confirmable parts; the client controls concurrency.
 - **MongoDB as upload state:** the video document records ownership, S3 identity, confirmed ETags, and lifecycle status so completion can be coordinated safely.
-- **Layered video backend:** controllers depend on core services, which depend on repository and storage interfaces. The service container keeps those dependencies replaceable for tests and future storage providers.
-- **Separate project and video APIs:** account/project concerns and high-volume object-storage operations have independent deployment and scaling boundaries.
+- **Shared User Schema & Credits:** Both backends share a MongoDB database (`projectdb`) and a unified User schema to manage authentication and feature credits.
+- **AWS MediaConvert Transcoding:** Videos can optionally be transcoded to a highly optimized 720p H.264 MP4 format for fast web streaming, orchestrated via a job queue.
 - **Defensive operations:** Helmet, rate limits, request logging, readiness checks, graceful shutdown, and a scheduled cleanup job cover the baseline operational needs.
 
 ## Screenshots
@@ -205,10 +208,8 @@ No screenshots are currently committed to the repository. The primary UI is the 
 
 ## Known Limitations
 
-- There is no video transcoding, thumbnail generation, virus scanning, or background processing worker yet; the current pipeline stores and serves the original object.
 - AWS credentials are configured through environment variables and the S3 client is created with explicit credentials. Production deployments should prefer workload identity or an AWS role.
 - `CORS_ORIGIN` defaults to `*`; set it explicitly outside local development.
-- The two backends use separate MongoDB databases by default and share JWT signing configuration rather than a shared user model.
 - The SDK currently uses different base-path conventions: upload methods expect a URL ending in `/api/v1`, while `VideoClient` appends `/api/v1` itself. Use the upload methods carefully or normalize this client contract before publishing the SDK.
 - The cleanup job runs every 15 minutes and marks stale database records failed; deployment should also monitor abandoned S3 multipart uploads with an S3 lifecycle rule.
 
