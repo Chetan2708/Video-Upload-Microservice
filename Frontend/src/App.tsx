@@ -29,7 +29,8 @@ function App() {
         }, 1500);
 
         // Ping the API to wake it up
-        fetch(`${config.projectApiUrl}/health`)
+        const baseUrl = config.projectApiUrl.replace(/\/api.*$/, '');
+        fetch(`${baseUrl}/health`)
             .then(() => {
                 const duration = Date.now() - startTime;
                 if (duration < 1500) {
