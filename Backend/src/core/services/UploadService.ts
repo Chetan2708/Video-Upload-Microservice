@@ -107,4 +107,28 @@ export class UploadService {
 
         throw new ConflictError(`Cannot complete upload in status ${video.status}`);
     }
+
+    async abortUpload(videoId: string, userId: string): Promise<void> {
+        logger.info({ videoId, userId }, 'Aborting upload');
+        const video = await this.videoRepo.findByIdAndUser(videoId, userId);
+
+        if (!video) {
+            throw new NotFoundError("Video not found");
+        }
+
+        if (video.status === 'UPLOADED') {
+            throw new ConflictError("Cannot abort an already uploaded video");
+        }
+
+        if (video.uploadId && video.s3Key) {
+            try {
+                await this.s3Service.abortMultipartUpload(video.s3Key, video.uploadId);
+            } catch (err) {
+                logger.error({ err, videoId }, 'Failed to abort multipart upload in S3, continuing with DB update');
+            }
+        }
+
+        await this.videoRepo.markAsFailed(videoId, 'USER_ABORTED');
+        logger.info({ videoId }, 'Successfully aborted upload');
+    }
 }

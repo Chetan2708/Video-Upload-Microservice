@@ -64,4 +64,16 @@ export class UploadController {
             next(error);
         }
     }
+
+    abortUpload = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { videoId } = req.body;
+            const userId = req.user!.id;
+
+            await this.uploadService.abortUpload(videoId, userId);
+            res.json({ message: "Upload aborted successfully" });
+        } catch (error) {
+            next(error);
+        }
+    }
 }

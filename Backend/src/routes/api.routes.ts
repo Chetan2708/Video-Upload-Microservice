@@ -163,6 +163,31 @@ router.post('/upload/complete', validate([
 
 /**
  * @swagger
+ * /upload/abort:
+ *   post:
+ *     summary: Abort a multipart upload
+ *     tags: [Upload]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - videoId
+ *             properties:
+ *               videoId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Upload aborted successfully
+ */
+router.post('/upload/abort', validate([
+    body('videoId').isString()
+]), uploadController.abortUpload);
+
+/**
+ * @swagger
  * /videos:
  *   get:
  *     summary: Get all videos for the user

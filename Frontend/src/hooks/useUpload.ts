@@ -18,6 +18,7 @@ interface UseUploadReturn {
     parts: PartInfo[];
     speedInfo: UploadSpeedInfo | null;
     errorMessage: string | null;
+    maxConcurrency: number;
     dragging: boolean;
     fileInputRef: React.RefObject<HTMLInputElement | null>;
     handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -195,5 +196,6 @@ export const useUpload = (
         cancelUpload,
         retryUpload,
         clearError,
+        maxConcurrency: uploadHandleRef.current?.maxConcurrency || 3,
     };
 };

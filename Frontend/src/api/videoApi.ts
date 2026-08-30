@@ -48,13 +48,32 @@ export interface UploadCallbacks {
     onStateChange: (state: UploadState) => void;
 }
 
-export type UploadState = 'idle' | 'initializing' | 'uploading' | 'completing' | 'success' | 'error' | 'cancelled';
+export type UploadState = 'idle' | 'initializing' | 'uploading' | 'completing' | 'processing' | 'success' | 'error' | 'cancelled';
 
 export interface UploadHandle {
     promise: Promise<VideoMeta>;
     abort: () => void;
-    /** Re-upload only failed parts. Call after an error to resume. */
     retry: () => Promise<VideoMeta>;
+    maxConcurrency: number;
+}
+
+async function awaitStatus(
+    videoId: string,
+    targetStatuses: string[],
+    signal?: AbortSignal,
+    pollingInterval = 2000
+): Promise<string> {
+    while (!signal?.aborted) {
+        const status = await getVideoStatus(videoId);
+        if (targetStatuses.includes(status)) {
+            return status;
+        }
+        if (status === 'FAILED') {
+            throw new Error('Video processing failed on backend');
+        }
+        await new Promise(r => setTimeout(r, pollingInterval));
+    }
+    throw new DOMException('Polling cancelled', 'AbortError');
 }
 
 async function retryFetch(
@@ -187,6 +206,20 @@ export function uploadVideo(
         }
     };
 
+    const completeAndPoll = async (vidId: string) => {
+        callbacks.onStateChange('completing');
+        const { data } = await client.post<{status: string}>('/upload/complete', { videoId: vidId }, { signal: abortController.signal });
+        
+        let currentStatus = data.status;
+        if (currentStatus === 'COMPLETING') {
+            currentStatus = await awaitStatus(vidId, ['PROCESSING', 'UPLOADED'], abortController.signal);
+        }
+        if (currentStatus === 'PROCESSING') {
+            callbacks.onStateChange('processing');
+            currentStatus = await awaitStatus(vidId, ['UPLOADED'], abortController.signal);
+        }
+    };
+
     const execute = async (): Promise<VideoMeta> => {
         callbacks.onStateChange('initializing');
 
@@ -201,8 +234,7 @@ export function uploadVideo(
         callbacks.onStateChange('uploading');
         await runUpload(parts);
 
-        callbacks.onStateChange('completing');
-        await client.post('/upload/complete', { videoId }, { signal: abortController.signal });
+        await completeAndPoll(videoId);
 
         callbacks.onStateChange('success');
         return {
@@ -235,8 +267,7 @@ export function uploadVideo(
             throw new Error(`${stillFailed.length} part(s) still failed after retry`);
         }
 
-        callbacks.onStateChange('completing');
-        await client.post('/upload/complete', { videoId }, { signal: abortController.signal });
+        await completeAndPoll(videoId);
 
         callbacks.onStateChange('success');
         return {
@@ -260,9 +291,17 @@ export function uploadVideo(
         throw err;
     });
 
+    const handleAbort = () => {
+        abortController.abort();
+        if (videoId) {
+            client.post('/upload/abort', { videoId }).catch(() => {});
+        }
+    };
+
     return {
         promise: uploadPromise,
-        abort: () => abortController.abort(),
+        abort: handleAbort,
         retry: retryFailed,
+        maxConcurrency: MAX_CONCURRENCY,
     };
 }

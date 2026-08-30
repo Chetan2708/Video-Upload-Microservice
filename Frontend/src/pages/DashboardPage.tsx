@@ -12,8 +12,8 @@ import { UploadProgress } from '../components/UploadProgress';
 import { UploadZone } from '../components/UploadZone';
 import { VideoGrid } from '../components/VideoGrid';
 import { CreateProjectModal } from '../components/CreateProjectModal';
-import { VideoPlayerModal } from '../components/VideoPlayerModal';
-import { VideoDetailsDrawer } from '../components/VideoDetailsDrawer';
+import { VideoDetailsPanel } from '../components/VideoDetailsPanel';
+import { DashboardSummary } from '../components/DashboardSummary';
 import { UploadHistory } from '../components/UploadHistory';
 import { ArchitecturePanel } from '../components/ArchitecturePanel';
 
@@ -39,7 +39,7 @@ export const DashboardPage = () => {
     // Upload logic
     const {
         uploadState, uploadProgress, uploadFileName, uploadedBytes, totalBytes,
-        parts, speedInfo, errorMessage, dragging, fileInputRef,
+        parts, speedInfo, errorMessage, maxConcurrency, dragging, fileInputRef,
         handleFileSelect, handleDrop, setDragging, openFilePicker,
         cancelUpload, retryUpload, clearError,
     } = useUpload(selectedProject?.id || null, async (projectId: string) => {
@@ -201,6 +201,7 @@ export const DashboardPage = () => {
                                 parts={parts}
                                 speedInfo={speedInfo}
                                 errorMessage={errorMessage}
+                                maxConcurrency={maxConcurrency}
                                 onCancel={cancelUpload}
                                 onRetry={retryUpload}
                                 onDismiss={clearError}
@@ -219,7 +220,9 @@ export const DashboardPage = () => {
 
                         {/* Search / Sort / Filter toolbar */}
                         {videos.length > 0 && (
-                            <div className="toolbar">
+                            <>
+                                <DashboardSummary videos={videos} />
+                                <div className="toolbar">
                                 <div className="search-wrapper">
                                     <Search size={14} className="search-icon" />
                                     <input
@@ -252,7 +255,8 @@ export const DashboardPage = () => {
                                         </button>
                                     ))}
                                 </div>
-                            </div>
+                                </div>
+                            </>
                         )}
 
                         {loadingVideos ? (
@@ -303,14 +307,15 @@ export const DashboardPage = () => {
             )}
 
             {playingVideo && (
-                <VideoPlayerModal video={playingVideo} onClose={closePlayer} />
+                <VideoDetailsPanel video={playingVideo} onClose={closePlayer} />
             )}
 
-            <VideoDetailsDrawer
-                video={detailsVideo}
-                onClose={() => setDetailsVideo(null)}
-                onPlay={(videoId) => { setDetailsVideo(null); playVideo(videoId); }}
-            />
+            {detailsVideo && !playingVideo && (
+                <VideoDetailsPanel
+                    video={detailsVideo}
+                    onClose={() => setDetailsVideo(null)}
+                />
+            )}
         </div>
     );
 };
