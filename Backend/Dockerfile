@@ -10,7 +10,7 @@ COPY pnpm-lock.yaml ./
 COPY tsconfig.json ./
 
 # Install all dependencies (including devDependencies) to build
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 COPY src ./src
 
@@ -30,7 +30,7 @@ COPY package.json ./
 COPY pnpm-lock.yaml ./
 
 # Install only production dependencies
-RUN pnpm install --prod --frozen-lockfile
+RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 
 # Copy built assets from builder stage
 COPY --from=builder /app/dist ./dist
