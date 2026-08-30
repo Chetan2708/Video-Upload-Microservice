@@ -30,5 +30,14 @@ export const config = {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
         bucketName: process.env.AWS_BUCKET_NAME || '',
+    },
+    mediaConvert: {
+        endpoint: process.env.AWS_MEDIACONVERT_ENDPOINT || '',
+        roleArn: process.env.AWS_MEDIACONVERT_ROLE_ARN || '',
+        /** Defaults to the same bucket used for uploads. */
+        outputBucket: process.env.AWS_MEDIACONVERT_OUTPUT_BUCKET || process.env.AWS_BUCKET_NAME || '',
+    },
+    features: {
+        transcodingEnabled: process.env.ENABLE_TRANSCODING !== 'false',
     }
 };
