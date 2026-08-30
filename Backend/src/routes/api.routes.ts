@@ -3,6 +3,7 @@ import { ServiceContainer } from '../core/di/ServiceContainer';
 import { body } from 'express-validator';
 import { validate } from '../interface-adapters/middleware/validationMiddleware';
 import rateLimit from 'express-rate-limit';
+import { config } from '../core/config/config';
 
 const router = Router();
 
@@ -17,6 +18,21 @@ router.use(limiter);
 const services = ServiceContainer.getInstance();
 const uploadController = services.uploadController;
 const videoController = services.videoController;
+const transcodeController = services.transcodeController;
+
+/**
+ * @swagger
+ * /config:
+ *   get:
+ *     summary: Get public system configuration and feature flags
+ *     tags: [Config]
+ *     responses:
+ *       200:
+ *         description: Configuration object
+ */
+router.get('/config', (req, res) => {
+    res.json({ features: config.features });
+});
 
 /**
  * @swagger
@@ -279,5 +295,82 @@ router.get('/videos/:videoId', videoController.getVideo);
  *         description: Video not found
  */
 router.get('/videos/status/:videoId', videoController.getVideoStatus);
+
+/**
+ * @swagger
+ * /videos/{videoId}/transcode:
+ *   post:
+ *     summary: Trigger video transcoding
+ *     description: Submit a MediaConvert transcoding job for an uploaded video. Produces HLS adaptive bitrate (360p, 720p, 1080p) and a web-optimised MP4.
+ *     tags: [Transcode]
+ *     parameters:
+ *       - in: path
+ *         name: videoId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The video ID
+ *     responses:
+ *       202:
+ *         description: Transcoding job submitted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 videoId:
+ *                   type: string
+ *                 jobId:
+ *                   type: string
+ *       409:
+ *         description: Video is not in a valid state for transcoding
+ *       503:
+ *         description: Transcoding is not configured
+ */
+router.post('/videos/:videoId/transcode', transcodeController.triggerTranscode);
+
+/**
+ * @swagger
+ * /videos/{videoId}/transcode:
+ *   get:
+ *     summary: Get transcoding status
+ *     description: Check the current transcoding progress and output files for a video.
+ *     tags: [Transcode]
+ *     parameters:
+ *       - in: path
+ *         name: videoId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The video ID
+ *     responses:
+ *       200:
+ *         description: Current transcoding status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 videoId:
+ *                   type: string
+ *                 status:
+ *                   type: string
+ *                 transcodeJobId:
+ *                   type: string
+ *                 transcodeStatus:
+ *                   type: string
+ *                   enum: [SUBMITTED, PROGRESSING, COMPLETE, ERROR, CANCELED]
+ *                 percentComplete:
+ *                   type: number
+ *                 outputFiles:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *       404:
+ *         description: Video not found
+ */
+router.get('/videos/:videoId/transcode', transcodeController.getTranscodeStatus);
 
 export default router;

@@ -33,9 +33,14 @@ const videoSchema = new Schema<IVideoJob>({
             confirmedAt: { type: Date, required: true }
         }, { _id: false }),
         default: {}
-    }
+    },
+    transcodeJobId: { type: String },
+    thumbnailKey: { type: String }
 }, {
     timestamps: true
 });
+
+// Compound index for polling PROCESSING jobs efficiently
+videoSchema.index({ status: 1, updatedAt: 1 });
 
 export const VideoModel = model<IVideoJob>('Video', videoSchema);

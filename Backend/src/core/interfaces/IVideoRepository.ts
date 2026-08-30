@@ -12,6 +12,10 @@ export interface IVideoJob {
     completionParts?: { PartNumber: number; ETag: string }[];
     processedFiles: string[];
     parts: Record<string, { etag: string; confirmedAt: Date }>;
+    /** AWS MediaConvert job ID. Set when transcoding begins. */
+    transcodeJobId?: string;
+    /** S3 key of the generated thumbnail image. */
+    thumbnailKey?: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -32,4 +36,12 @@ export interface IVideoRepository {
     // Cleanup methods
     findStaleUploads(criteria: { status: IVideoJob['status']; olderThan: Date }): Promise<IVideoJob[]>;
     markAsFailed(videoId: string, reason: string): Promise<boolean>;
+
+    // Transcoding methods
+    /** Transition a video to PROCESSING and record the MediaConvert job ID. */
+    startProcessing(videoId: string, transcodeJobId: string): Promise<boolean>;
+    /** Transition a video to DONE with the list of processed output S3 keys. */
+    completeProcessing(videoId: string, processedFiles: string[], thumbnailKey?: string): Promise<boolean>;
+    /** Find all videos currently in a given status (e.g. PROCESSING). */
+    findByStatus(status: IVideoJob['status']): Promise<IVideoJob[]>;
 }

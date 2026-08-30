@@ -129,7 +129,7 @@ export class MongoVideoRepository implements IVideoRepository {
         const res = await VideoModel.updateOne(
             {
                 videoId,
-                status: { $in: ['INITIATED', 'UPLOADING', 'COMPLETING'] }
+                status: { $in: ['INITIATED', 'UPLOADING', 'COMPLETING', 'PROCESSING'] }
             },
             {
                 $set: {
@@ -139,5 +139,38 @@ export class MongoVideoRepository implements IVideoRepository {
             }
         );
         return res.modifiedCount > 0;
+    }
+
+    async startProcessing(videoId: string, transcodeJobId: string): Promise<boolean> {
+        const res = await VideoModel.updateOne(
+            { videoId, status: 'UPLOADED' },
+            {
+                $set: {
+                    status: 'PROCESSING',
+                    transcodeJobId
+                }
+            }
+        );
+        return res.modifiedCount > 0;
+    }
+
+    async completeProcessing(videoId: string, processedFiles: string[], thumbnailKey?: string): Promise<boolean> {
+        const update: Record<string, unknown> = {
+            status: 'DONE',
+            processedFiles
+        };
+        if (thumbnailKey) {
+            update.thumbnailKey = thumbnailKey;
+        }
+
+        const res = await VideoModel.updateOne(
+            { videoId, status: 'PROCESSING' },
+            { $set: update }
+        );
+        return res.modifiedCount > 0;
+    }
+
+    async findByStatus(status: IVideoJob['status']): Promise<IVideoJob[]> {
+        return await VideoModel.find({ status }).lean();
     }
 }

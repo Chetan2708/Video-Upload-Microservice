@@ -1,12 +1,14 @@
 import { IStorageService } from '../interfaces/IStorageService';
 import { IVideoRepository, IVideoJob } from '../interfaces/IVideoRepository';
 import { NotFoundError, ConflictError, AppError } from '../errors/AppError';
+import { TranscodeService } from './TranscodeService';
 import { logger } from '../utils/logger';
 
 export class UploadService {
     constructor(
         private s3Service: IStorageService,
-        private videoRepo: IVideoRepository
+        private videoRepo: IVideoRepository,
+        private transcodeService?: TranscodeService
     ) { }
 
     async initializeUpload(fileName: string, contentType: string, fileSize: number, userId: string): Promise<{ videoId: string; uploadId: string; key: string; }> {
@@ -102,6 +104,7 @@ export class UploadService {
             await this.videoRepo.finalizeUpload(videoId, userId);
 
             logger.info({ videoId }, 'Successfully completed upload');
+
             return { message: "Upload complete", status: 'UPLOADED' };
         }
 
@@ -130,5 +133,19 @@ export class UploadService {
 
         await this.videoRepo.markAsFailed(videoId, 'USER_ABORTED');
         logger.info({ videoId }, 'Successfully aborted upload');
+    }
+
+    /**
+     * Fire-and-forget transcoding trigger.
+     * Errors are logged but never propagated — the upload is already complete.
+     */
+    private triggerTranscodeAsync(videoId: string): void {
+        if (!this.transcodeService?.isEnabled()) {
+            return;
+        }
+
+        this.transcodeService.submitTranscode(videoId).catch((err) => {
+            logger.error({ err, videoId }, 'Auto-trigger transcoding failed (non-blocking)');
+        });
     }
 }

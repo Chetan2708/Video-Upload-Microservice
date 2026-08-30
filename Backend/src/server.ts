@@ -56,11 +56,22 @@ const startServer = async () => {
         logger.info("Initializing Services using Container...");
         const services = ServiceContainer.getInstance();
         const cleanupService = services.cleanupService;
+        const transcodeService = services.transcodeService;
 
         cron.schedule('*/15 * * * *', () => {
             cleanupService.cleanupStaleUploads();
         });
         logger.info("Cleanup Cron Job scheduled (every 15 mins).");
+
+        // Poll MediaConvert job statuses every 30 seconds
+        if (transcodeService.isEnabled()) {
+            cron.schedule('*/30 * * * * *', () => {
+                transcodeService.pollActiveJobs().catch((err) => {
+                    logger.error({ err }, 'Transcode poll error');
+                });
+            });
+            logger.info("Transcode polling scheduled (every 30 seconds).");
+        }
 
         const PORT = config.port;
 
