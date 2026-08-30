@@ -2,6 +2,7 @@ export interface User {
     id: string;
     email: string;
     name: string;
+    credits: number;
 }
 
 export interface Project {
@@ -28,4 +29,6 @@ export interface VideoMeta {
 
 export interface VideoWithUrl extends VideoMeta {
     url: string | null;
+    hlsUrl?: string | null;
+    mp4Url?: string | null;
 }

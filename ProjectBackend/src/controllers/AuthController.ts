@@ -23,7 +23,7 @@ export class AuthController {
             const token = jwt.sign({ id: user._id }, config.jwtSecret, { expiresIn: '7d' });
 
             res.status(201).json({
-                user: { id: user._id, email: user.email, name: user.name },
+                user: { id: user._id, email: user.email, name: user.name, credits: user.credits },
                 token
             });
         } catch (error) {
@@ -48,7 +48,7 @@ export class AuthController {
             const token = jwt.sign({ id: user._id }, config.jwtSecret, { expiresIn: '7d' });
 
             res.status(200).json({
-                user: { id: user._id, email: user.email, name: user.name },
+                user: { id: user._id, email: user.email, name: user.name, credits: user.credits },
                 token
             });
         } catch (error) {
@@ -69,7 +69,7 @@ export class AuthController {
             }
 
             res.status(200).json({
-                user: { id: user._id, email: user.email, name: user.name }
+                user: { id: user._id, email: user.email, name: user.name, credits: user.credits }
             });
         } catch (error) {
             next(error);

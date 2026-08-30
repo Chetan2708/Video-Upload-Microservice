@@ -9,6 +9,7 @@ interface AuthContextType {
     login: (email: string, password: string) => Promise<void>;
     register: (email: string, password: string, name: string) => Promise<void>;
     logout: () => void;
+    refreshUser: () => Promise<void>;
     error: string | null;
     clearError: () => void;
 }
@@ -81,10 +82,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(null);
     };
 
+    const refreshUser = async () => {
+        if (!token) return;
+        try {
+            const data = await getMe();
+            setUser(data);
+        } catch (error) {
+            console.error('Failed to refresh user', error);
+        }
+    };
+
     const clearError = () => setError(null);
 
     return (
-        <AuthContext.Provider value={{ user, token, loading, login, register, logout, error, clearError }}>
+        <AuthContext.Provider
+            value={{
+                user,
+                token,
+                loading,
+                login,
+                register,
+                logout,
+                refreshUser,
+                error,
+                clearError,
+            }}
+        >
             {children}
         </AuthContext.Provider>
     );
