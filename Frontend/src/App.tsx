@@ -3,6 +3,8 @@ import { useAuth } from './context/AuthContext';
 import { useToast } from './context/ToastContext';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { VideoPage } from './pages/VideoPage';
 import { config } from './config';
 
 function App() {
@@ -50,7 +52,17 @@ function App() {
         );
     }
 
-    return user ? <DashboardPage /> : <LoginPage />;
+    if (!user) {
+        return <LoginPage />;
+    }
+
+    return (
+        <Routes>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/videos/:videoId" element={<VideoPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+    );
 }
 
 export default App;

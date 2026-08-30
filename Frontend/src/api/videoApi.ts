@@ -9,6 +9,11 @@ export const getVideo = async (videoId: string) => {
     return data.video;
 };
 
+export const triggerTranscode = async (videoId: string) => {
+    const { data } = await client.post(`/videos/${videoId}/transcode`);
+    return data;
+};
+
 export const getVideosBulk = async (videoIds: string[]) => {
     const { data } = await client.post<{ videos: VideoWithUrl[] }>('/videos/bulk', { videoIds });
     return data.videos;

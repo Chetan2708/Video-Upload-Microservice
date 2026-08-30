@@ -5,12 +5,19 @@ import App from './App';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 
+import { ConfigProvider } from './context/ConfigContext';
+import { BrowserRouter } from 'react-router-dom';
+
 createRoot(document.getElementById('root')!).render(
     <StrictMode>
         <AuthProvider>
-            <ToastProvider>
-                <App />
-            </ToastProvider>
+            <ConfigProvider>
+                <ToastProvider>
+                    <BrowserRouter>
+                        <App />
+                    </BrowserRouter>
+                </ToastProvider>
+            </ConfigProvider>
         </AuthProvider>
     </StrictMode>
 );

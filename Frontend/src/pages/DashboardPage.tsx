@@ -12,12 +12,12 @@ import { UploadProgress } from '../components/UploadProgress';
 import { UploadZone } from '../components/UploadZone';
 import { VideoGrid } from '../components/VideoGrid';
 import { CreateProjectModal } from '../components/CreateProjectModal';
-import { VideoDetailsPanel } from '../components/VideoDetailsPanel';
 import { DashboardSummary } from '../components/DashboardSummary';
 import { UploadHistory } from '../components/UploadHistory';
 import { ArchitecturePanel } from '../components/ArchitecturePanel';
 
 import { Menu, Search, Video } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import type { VideoMeta, VideoWithUrl } from '../types';
 
 type SortOption = 'date-desc' | 'date-asc' | 'size-desc' | 'size-asc' | 'name-asc' | 'name-desc';
@@ -28,6 +28,7 @@ const STATUS_FILTERS: StatusFilter[] = ['all', 'UPLOADED', 'DONE', 'PROCESSING',
 export const DashboardPage = () => {
     const { user, logout } = useAuth();
     const isMobile = useIsMobile();
+    const navigate = useNavigate();
 
     // Project state & operations
     const { projects, selectedProject, selectProject, createProject, deleteProject, loading: loadingProjects, error: projectsError, retryLoadProjects } = useProjects();
@@ -289,12 +290,12 @@ export const DashboardPage = () => {
                         ) : (
                             <VideoGrid
                                 videos={filteredAndSortedVideos}
-                                onPlayVideo={playVideo}
-                                onVideoDetails={handleVideoDetails}
+                                onPlayVideo={(videoId) => navigate(`/videos/${videoId}`)}
+                                onVideoDetails={(videoId) => navigate(`/videos/${videoId}`)}
                             />
                         )}
 
-                        <UploadHistory onPlayVideo={playVideo} />
+                        <UploadHistory onPlayVideo={(videoId) => navigate(`/videos/${videoId}`)} />
                     </>
                 )}
             </main>
@@ -303,17 +304,6 @@ export const DashboardPage = () => {
                 <CreateProjectModal
                     onCreate={handleCreateProject}
                     onClose={() => setShowCreateModal(false)}
-                />
-            )}
-
-            {playingVideo && (
-                <VideoDetailsPanel video={playingVideo} onClose={closePlayer} />
-            )}
-
-            {detailsVideo && !playingVideo && (
-                <VideoDetailsPanel
-                    video={detailsVideo}
-                    onClose={() => setDetailsVideo(null)}
                 />
             )}
         </div>
